@@ -834,65 +834,10 @@
         <div class="tab-nav">
             <button class="tab-btn active" id="tabBtnMain" onclick="switchTab('main')">🔧 Full Analysis</button>
             <button class="tab-btn" id="tabBtnQuickCbe" onclick="switchTab('quickCbe')">⚡ Quick CBE Estimator</button>
+            <button class="tab-btn" id="tabBtnHelp" onclick="switchTab('help')">ℹ️ Help</button>
         </div>
 
         <div id="tabMain" class="tab-panel">
-
-<!-- WELCOME CARD -->
-        <div class="card" style="border-color:#ffd700; padding: 20px;">
-            <h2 style="margin-bottom:15px; color:#ffd700;">👋 Welcome to the Pumping Unit Optimization & Balancing Tool</h2>
-            
-            <p style="color:#ccc; font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
-                Optimize your surface pumping unit's efficiency by calculating current gearbox loading and determining the exact counterweight adjustments needed for perfect balance.
-            </p>
-
-            <div style="background: rgba(255, 255, 255, 0.05); padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
-                <h4 style="margin: 0 0 8px 0; color: #fff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Two Ways to Analyze:</h4>
-                <ul style="color:#bbb; font-size:0.85rem; line-height:1.7; margin: 0; padding-left: 20px;">
-                    <li>
-                        <strong style="color:#00d4ff;">🔧 Full Analysis</strong> — the complete, dynamometer-based workflow. Upload a
-                        <code style="color:#ffd700;">.dat</code> or <code style="color:#ffd700;">.dyn</code> file (auto-detected), select
-                        the unit and stroke, enter the existing counterweight
-                        setup, and get a full 360° gearbox torque analysis: current vs. optimized loading, permissible-load boundaries,
-                        cyclic load factor, motor power, and the precise counterweight movement needed for balance.
-                    </li>
-                    <li>
-                        <strong style="color:#ffd700;">⚡ Quick CBE Estimator</strong> — a fast, standalone estimate for when a full
-                        dynamometer card isn't available. Enter only the Peak and Minimum Polished Rod Loads along with the unit size
-                        and stroke length, and get the equivalent counterbalance moment and recommended counterweight movement,
-                        based on the standard industry approximation (Effective CBE referenced through the unit's maximum torque factor).
-                    </li>
-                </ul>
-            </div>
-
-            <p style="color:#aaa; font-size:0.85rem; margin-top:12px; line-height:1.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
-                💡 <strong>Need a different unit size?</strong> If you'd like to add more unit sizes to the database, please contact the admin on WhatsApp
-                <br>
-                <a href="https://wa.me/201289630938" target="_blank" rel="noopener"
-                   style="color:#00ff88; font-weight:600; text-decoration:none; display: inline-block; margin-top: 5px;">
-                    📱 +20 128 963 0938
-                </a>
-            </p>
-        </div>
-
-        <!-- LICENSE KEY -->
-        <div class="card" id="licenseCard">
-            <h2><span class="step-badge">🔑</span> License Key</h2>
-            <div class="field license-key-field">
-                <label>License Key</label>
-                <div class="license-key-group">
-                    <input type="text" id="licenseKeyInput" class="license-key-input"
-                           placeholder="e.g. GEM-2026"
-                           autocomplete="off" spellcheck="false" maxlength="40"
-                           onchange="saveLicenseKey(this.value.trim())">
-                    <button class="btn" id="checkLicenseBtn" onclick="checkLicenseButton()">🔍 Check License</button>
-                </div>
-            </div>
-            <p style="color:#888; font-size:0.8rem; margin-top:8px; line-height:1.5; text-align:center;">
-                License key is securely stored locally and verified server-side.
-                Active quota usage is displayed in the status bar below.
-            </p>
-        </div>
 
         <!-- STEP 0: AUTO-LOAD DATABASE (hidden from view, still runs in background) -->
         <div class="card hidden" id="step0Card">
@@ -1218,6 +1163,70 @@
         </div> <!-- /tabMain -->
 
         <!-- ============================================================ -->
+        <!-- HELP / INFO TAB -- how-to-use, license key (kept off the     -->
+        <!-- Full Analysis tab so that page stays focused on the steps)   -->
+        <!-- ============================================================ -->
+        <div id="tabHelp" class="tab-panel hidden">
+
+        <!-- HOW TO USE -->
+        <div class="card" style="border-color:#ffd700; padding: 20px;">
+            <h2 style="margin-bottom:15px; color:#ffd700;">👋 How to Use</h2>
+
+            <p style="color:#ccc; font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
+                Optimize your surface pumping unit's efficiency by calculating current gearbox loading and determining the exact counterweight adjustments needed for perfect balance.
+            </p>
+
+            <div style="background: rgba(255, 255, 255, 0.05); padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; color: #fff; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Two Ways to Analyze:</h4>
+                <ul style="color:#bbb; font-size:0.85rem; line-height:1.7; margin: 0; padding-left: 20px;">
+                    <li>
+                        <strong style="color:#00d4ff;">🔧 Full Analysis</strong> — the complete, dynamometer-based workflow. Upload a
+                        <code style="color:#ffd700;">.dat</code> or <code style="color:#ffd700;">.dyn</code> file (auto-detected), select
+                        the unit and stroke, enter the existing counterweight
+                        setup, and get a full 360° gearbox torque analysis: current vs. optimized loading, permissible-load boundaries,
+                        cyclic load factor, motor power, and the precise counterweight movement needed for balance.
+                    </li>
+                    <li>
+                        <strong style="color:#ffd700;">⚡ Quick CBE Estimator</strong> — a fast, standalone estimate for when a full
+                        dynamometer card isn't available. Enter only the Peak and Minimum Polished Rod Loads along with the unit size
+                        and stroke length, and get the equivalent counterbalance moment and recommended counterweight movement,
+                        based on the standard industry approximation (Effective CBE referenced through the unit's maximum torque factor).
+                    </li>
+                </ul>
+            </div>
+
+            <p style="color:#aaa; font-size:0.85rem; margin-top:12px; line-height:1.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+                💡 <strong>Need a different unit size?</strong> If you'd like to add more unit sizes to the database, please contact the admin on WhatsApp
+                <br>
+                <a href="https://wa.me/201289630938" target="_blank" rel="noopener"
+                   style="color:#00ff88; font-weight:600; text-decoration:none; display: inline-block; margin-top: 5px;">
+                    📱 +20 128 963 0938
+                </a>
+            </p>
+        </div>
+
+        <!-- LICENSE KEY -->
+        <div class="card" id="licenseCard">
+            <h2><span class="step-badge">🔑</span> License Key</h2>
+            <div class="field license-key-field">
+                <label>License Key</label>
+                <div class="license-key-group">
+                    <input type="text" id="licenseKeyInput" class="license-key-input"
+                           placeholder="e.g. GEM-2026"
+                           autocomplete="off" spellcheck="false" maxlength="40"
+                           onchange="saveLicenseKey(this.value.trim())">
+                    <button class="btn" id="checkLicenseBtn" onclick="checkLicenseButton()">🔍 Check License</button>
+                </div>
+            </div>
+            <p style="color:#888; font-size:0.8rem; margin-top:8px; line-height:1.5; text-align:center;">
+                License key is securely stored locally and verified server-side.
+                Active quota usage is displayed in the status bar below.
+            </p>
+        </div>
+
+        </div> <!-- /tabHelp -->
+
+        <!-- ============================================================ -->
         <!-- QUICK CBE ESTIMATOR TAB -- no .DAT file needed                -->
         <!-- ============================================================ -->
         <div id="tabQuickCbe" class="tab-panel hidden">
@@ -1355,7 +1364,7 @@
 
     <!-- FIXED-BOTTOM LICENSE STATUS FOOTER -->
     <div id="appFooterBar" class="app-footer-bar">
-        <span id="licenseStatus">Enter your license key above to begin.</span>
+        <span id="licenseStatus">Enter your license key in the ℹ️ Help tab to begin.</span>
         <div id="licenseLockNotice" class="status error hidden"></div>
     </div>
 
@@ -1445,8 +1454,10 @@
             } else {
                 const fa = status && status.fullAnalysis;
                 const qc = status && status.quickCbe;
-                const faLocked = !!(fa && fa.remaining <= 0);
-                const qcLocked = !!(qc && qc.remaining <= 0);
+                // remaining === -1 is the "unlimited" sentinel from worker.js
+                // (max: -1) -- never locked, regardless of how much is used.
+                const faLocked = !!(fa && fa.remaining !== -1 && fa.remaining <= 0);
+                const qcLocked = !!(qc && qc.remaining !== -1 && qc.remaining <= 0);
                 setTriggersDisabled(FULL_ANALYSIS_TRIGGER_IDS, faLocked);
                 setTriggersDisabled(QUICK_CBE_TRIGGER_IDS, qcLocked);
                 if (faLocked) notices.push('Full Analysis trials are used up.');
@@ -1485,12 +1496,15 @@
                 return;
             }
 
+            // max/remaining === -1 is the "unlimited" sentinel from worker.js
+            // (max: -1 on a feature bucket) -- show "∞" instead of "-1 / -1".
+            const fmtQuota = (bucket) => bucket.max === -1 ? '∞' : `${bucket.remaining} / ${bucket.max}`;
             const parts = [];
             if (status.fullAnalysis) {
-                parts.push(`Full Analysis: ${status.fullAnalysis.remaining} / ${status.fullAnalysis.max}`);
+                parts.push(`Full Analysis: ${fmtQuota(status.fullAnalysis)}`);
             }
             if (status.quickCbe) {
-                parts.push(`Quick CBE: ${status.quickCbe.remaining} / ${status.quickCbe.max}`);
+                parts.push(`Quick CBE: ${fmtQuota(status.quickCbe)}`);
             }
             if (status.expiresAt) parts.push(`expires ${status.expiresAt}`);
             el.textContent = '✅ Active — ' + parts.join(' | ');
@@ -1578,12 +1592,16 @@
         window.addEventListener('DOMContentLoaded', loadSavedLicenseKey);
 
         // ===== TAB SWITCHING =====
+        const TABS = ['main', 'quickCbe', 'help'];
         function switchTab(name) {
-            const isMain = name === 'main';
-            document.getElementById('tabMain').classList.toggle('hidden', !isMain);
-            document.getElementById('tabQuickCbe').classList.toggle('hidden', isMain);
-            document.getElementById('tabBtnMain').classList.toggle('active', isMain);
-            document.getElementById('tabBtnQuickCbe').classList.toggle('active', !isMain);
+            TABS.forEach(function (tab) {
+                const id = 'tab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+                const panel = document.getElementById(id);
+                const btn = document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1));
+                const isActive = tab === name;
+                if (panel) panel.classList.toggle('hidden', !isActive);
+                if (btn) btn.classList.toggle('active', isActive);
+            });
         }
 
         // ===== PRINT PAGE =====
@@ -1593,6 +1611,25 @@
         // buttons and nav). Un-shrinks the header first so it prints at
         // full size rather than mid-shrink from scrolling, then restores
         // the on-screen state afterwards.
+        //
+        // The two chart canvases are hand-drawn (not Chart.js), sized from
+        // their container's getBoundingClientRect() and normally redrawn by
+        // the ResizeObserver below whenever their container resizes. Print
+        // changes layout (page width, @page margins) too, which resizes
+        // those containers -- but Chrome and Firefox differ in whether that
+        // ResizeObserver callback is guaranteed to run before the print
+        // image is captured. Firefox does not reliably run it in time, so
+        // the canvas can print blank there even though it looks fine on
+        // screen (Chrome happens to work either way). The fix is to force a
+        // synchronous redraw on the standard 'beforeprint' event, which both
+        // browsers fire right before rendering the print output -- this
+        // doesn't depend on ResizeObserver timing in either browser.
+        window.addEventListener('beforeprint', function () {
+            if (!lastAnalysisResults) return;
+            drawChartLoadPos(lastAnalysisResults, lastStructLoad);
+            drawChartTorqueAngle(lastAnalysisResults, lastGbRating);
+        });
+
         function printPage() {
             const header = document.getElementById('pageTitle');
             const wasScrolled = header && header.classList.contains('is-scrolled');
