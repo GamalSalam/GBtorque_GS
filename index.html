@@ -1,10 +1,18 @@
 <!DOCTYPE html>
 <!--
   Gearbox Torque Analyzer / GearBalance Analyzer
-  VERSION: 2.2.0
-  Last updated: 2026-07-21
+  VERSION: 3.0.0
+  Last updated: 2026-10-07
 
   Changelog:
+  - 3.0.0 (2026-10-07): (1) Uploading a .dat/.dyn file now RESETS all Full Analysis
+                         inputs and results (unit, stroke, rotation, counterweights,
+                         step results, charts, debug table) -- every file starts clean.
+                         (2) Per-license databases are now ISOLATED: a key whose prefix
+                         has assets/<PREFIX>-units.json uses ONLY that client's units
+                         (default units are cleared, not merged). Keys with no client file
+                         get the default database back. Fixes two licenses' unit lists
+                         piling up in the same dropdown.
   - 2.2.0 (2026-07-21): Added offline support via a service worker (sw.js) + true
                          auto-update on next online load (see PWA/Offline Support
                          section in the handoff). Fixed the *actual* cause of the
@@ -682,7 +690,7 @@
             <div class="app-header-spacer" aria-hidden="true"></div>
             <div class="app-header-center">
                 <img src="assets/header-logo.png?v=1" alt="Gearbox Torque Analyzer" class="app-logo">
-                <span class="app-title-text"> GS<span class="app-version-badge">v2.3</span></span>
+                <span class="app-title-text"> GS<span class="app-version-badge">v3.0</span></span>
             </div>
             <div class="app-header-right">
                 <img src="assets/company-logo.png?v=1" alt="Company logo" class="app-company-logo">
@@ -1375,6 +1383,11 @@
         let counterweightsDB = {};
         let dbLoaded = { units: false, strokes: false, cw: false };
         let autoLoadFailed = false;
+        // Default-database snapshot + which database is currently live
+        // ('default' or a license-key prefix such as 'CMS'). See setActiveDatabase().
+        let defaultDbSnapshot = null;
+        let defaultDbReady = Promise.resolve();
+        let activeDbSource = 'default';
 
         // ===== PARSED DATA =====
         let parsedData = {
@@ -1880,17 +1893,91 @@
             return prefix ? prefix.toUpperCase() : null;
         }
 
+        // Fetch a database JSON. Returns {status:'ok', json}, {status:'missing'}
+        // (404 / not JSON), or {status:'error'} (network failure -- caller keeps
+        // whatever database is currently live rather than guessing).
+        async function fetchDbJson(filename) {
+            let response;
+            try {
+                response = await fetch(filename);
+            } catch (err) {
+                return { status: 'error' };
+            }
+            if (!response.ok) return { status: 'missing' };
+            try {
+                return { status: 'ok', json: await response.json() };
+            } catch (err) {
+                return { status: 'missing' };
+            }
+        }
+
+        function cloneDb(o) { return JSON.parse(JSON.stringify(o)); }
+
+        function takeDefaultSnapshot() {
+            defaultDbSnapshot = {
+                units: cloneDb(unitsDB),
+                strokes: cloneDb(strokesDB),
+                cw: cloneDb(counterweightsDB)
+            };
+        }
+
+        // Swap the live database. `clientJson` = that client's file, or null
+        // for the default database. Returns true if the live DB actually changed.
+        // The previous database is CLEARED (not merged), so two licenses never
+        // see each other's units. A client file with no counterweights borrows
+        // the default counterweights (they are not unit-specific).
+        function setActiveDatabase(source, clientJson) {
+            if (source === activeDbSource) return false;
+
+            // Capture the live default (incl. manual loads / admin edits) before leaving it.
+            if (activeDbSource === 'default') takeDefaultSnapshot();
+
+            // Selected unit/stroke/results belong to the old database -- drop them.
+            resetAnalysisState(true);
+            qbSelectedUnit = null;
+            qbSelectedStroke = null;
+
+            unitsDB = {}; strokesDB = {}; counterweightsDB = {};
+            dbLoaded = { units: false, strokes: false, cw: false };
+
+            if (clientJson) {
+                if (!Array.isArray(clientJson.counterweights) || !clientJson.counterweights.length) {
+                    counterweightsDB = cloneDb(defaultDbSnapshot.cw);
+                    dbLoaded.cw = Object.keys(counterweightsDB).length > 0;
+                }
+                applyDatabase(clientJson);
+            } else {
+                unitsDB = cloneDb(defaultDbSnapshot.units);
+                strokesDB = cloneDb(defaultDbSnapshot.strokes);
+                counterweightsDB = cloneDb(defaultDbSnapshot.cw);
+                dbLoaded = { units: true, strokes: true, cw: true };
+                checkAllDbLoaded();
+            }
+            activeDbSource = source;
+
+            if (typeof qbOnUnitChange === 'function') qbOnUnitChange();
+
+            const msg = document.getElementById('dbMsg');
+            if (msg && clientJson) {
+                msg.className = 'status success';
+                msg.textContent = `✅ ${source} client database loaded: ${Object.keys(unitsDB).length} units (default units cleared).`;
+            }
+            return true;
+        }
+
         async function loadDatabaseForKey(key) {
+            await defaultDbReady;
+            if (!defaultDbSnapshot) return;
             const prefix = getKeyPrefix(key);
-            if (!prefix) return;
-            const loaded = await autoLoadDB(`assets/${prefix}-units.json`);
-            if (loaded) {
-                const msg = document.getElementById('dbMsg');
-                if (msg) {
-                    msg.className = 'status success';
-                    msg.textContent = `✅ ${prefix} client database loaded.`;
+            let clientJson = null;
+            if (prefix) {
+                const res = await fetchDbJson(`assets/${prefix}-units.json`);
+                if (res.status === 'error') return; // offline/network issue: keep current DB
+                if (res.status === 'ok' && res.json && Array.isArray(res.json.units) && res.json.units.length) {
+                    clientJson = res.json;
                 }
             }
+            setActiveDatabase(clientJson ? prefix : 'default', clientJson);
         }
 
         function applyDatabase(json) {
@@ -1902,7 +1989,19 @@
             if (json.strokes) {
                 json.strokes.forEach(row => {
                     if (!strokesDB[row.unitKey]) strokesDB[row.unitKey] = [];
-                    strokesDB[row.unitKey].push({ sl: row.strokeLength, r: row.R });
+                    // De-dupe by stroke length instead of always pushing: applyDatabase()
+                    // can run more than once for the same file (e.g. every time "Check
+                    // License" re-triggers loadDatabaseForKey()), and without this, the
+                    // same stroke entries pile up each time (e.g. "144-126-102-88" would
+                    // repeat once per reload). Last-loaded value wins for a given stroke
+                    // length, matching the overwrite behavior units/counterweights already
+                    // have above.
+                    const existing = strokesDB[row.unitKey].find(s => s.sl === row.strokeLength);
+                    if (existing) {
+                        existing.r = row.R;
+                    } else {
+                        strokesDB[row.unitKey].push({ sl: row.strokeLength, r: row.R });
+                    }
                 });
                 dbLoaded.strokes = true;
             }
@@ -1978,12 +2077,13 @@
             msg.textContent = '✅ Built-in database loaded. You can load database.json to override.';
 
             // Step 2: try fetching assets/units_pro.json (or database.json) to override
-            autoLoadAllDBs().then(() => {
-                // Step 3: if a license key is already saved (loadSavedLicenseKey
-                // runs before this on DOMContentLoaded), check for a matching
-                // per-client database and override with that if found.
-                loadDatabaseForKey(getLicenseKey());
+            defaultDbReady = autoLoadAllDBs().then(() => {
+                takeDefaultSnapshot();
             });
+            // Step 3: if a license key is already saved (loadSavedLicenseKey
+            // runs before this on DOMContentLoaded), switch to that client's
+            // database ONLY (default units cleared) if a matching file exists.
+            defaultDbReady.then(() => loadDatabaseForKey(getLicenseKey()));
         }
 
         // ===== FALLBACK: MANUAL JSON FILE LOAD =====
@@ -2194,6 +2294,61 @@
             });
         }
 
+        // ===== RESET ALL FULL-ANALYSIS INPUTS / RESULTS =====
+        // keepFile=false: wipe everything (used on every new .dat/.dyn upload).
+        // keepFile=true : keep the parsed file + Steps 2/3, wipe only what depends on
+        //                 the unit database (used when a license switch swaps databases).
+        // The Quick CBE tab is independent and is not touched here.
+        function resetAnalysisState(keepFile) {
+            const $ = (id) => document.getElementById(id);
+            const setText = (ids, t) => ids.forEach(id => { const el = $(id); if (el) el.textContent = t; });
+            const hide = (ids) => ids.forEach(id => { const el = $(id); if (el) el.classList.add('hidden'); });
+
+            if (!keepFile) {
+                parsedData = {
+                    wellName: '', date: '', strokeLength: 0, strokeTime: 0,
+                    numPoints: 0, loadValues: [], positionValues: [],
+                    upstroke: [], downstroke: []
+                };
+                fileStrokeLength = 0;
+                hide(['fileInfo', 'step2Card', 'step3Card', 'dashboardCard']);
+                setText(['pWellName', 'pDate', 'pStrokeLength', 'pSpm', 'pNumPoints',
+                         'sPeakLoad', 'sMinLoad', 'sUpCount', 'sDownCount',
+                         'dashPeakLoad', 'dashMinLoad', 'dashUpCount', 'dashDownCount'], '-');
+            }
+
+            selectedUnit = null;
+            selectedStroke = null;
+            existingM = 0;
+            lastAnalysisResults = null; lastStructLoad = null; lastGbRating = null;
+            chart1State = null; chart2State = null;
+            _debugRows = [];
+            _cwcState = null;
+
+            // Step 3 inputs
+            const unitSel = $('unitSize'); if (unitSel) unitSel.value = '';
+            resetUnitSelection();                       // stroke list, geometry, strokeInfo/Match
+            const rot = $('rotation'); if (rot) rot.value = '-1';   // default CCW
+            ['cbType1', 'cbType2', 'cwcType1', 'cwcType2'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+            ['cbMove1', 'cbMove2'].forEach(id => { const el = $(id); if (el) el.value = '0'; });
+            const man = $('cwc1_manualMove'); if (man) man.value = '';
+
+            // Results
+            hide(['step4Card', 'step5Card', 'step6Card', 'cwc_warning']);
+            setText(['sumGbLoading', 'sumGbLoadingOpt', 'sumCLF', 'sumMOptimized', 'resExistingM',
+                     'dashDimA', 'dashDimP', 'dashDimC', 'dashDimI', 'dashDimK', 'dashDimR',
+                     'dashGbRating', 'dashStructLoad', 'dashCrankEffect', 'dashCrankLength',
+                     'dashBeamWeight', 'dashCrankType', 'dashExistingM', 'dashPeakTorque',
+                     'dashPeakTorqueOpt', 'dashPRWork', 'dashPRPower', 'dashMotorPower'], '-');
+            setText(['cwc1_move', 'cwc2_move'], '—');
+            setText(['cwc1_note', 'cwc2_note', 'cwc_warning', 'debugConstInfo'], '');
+            ['debugThead', 'debugTbody'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+            ['chartLoadPos', 'chartLoadPosOverlay', 'chartTorqueAngle', 'chartTorqueAngleOverlay'].forEach(id => {
+                const c = $(id);
+                if (c && c.getContext) { const ctx = c.getContext('2d'); if (ctx) ctx.clearRect(0, 0, c.width, c.height); }
+            });
+        }
+
         // ===== STEP 1: FILE IMPORT =====
         // Parses the .dyn format: line0=pointCount, then N lines of "position, load",
         // then trailing metadata: [0]=?, [1]=SPM (strokes per minute, NOT seconds), [2]=strokeLength, [3]=?, [4]=?, [5]=?, [6]=dateTime, [7]=?
@@ -2323,6 +2478,8 @@
         document.getElementById('datFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
+            // New file = clean slate: wipe all previous inputs and results at once.
+            resetAnalysisState(false);
             const status = document.getElementById('status');
             status.className = 'status';
             status.textContent = 'Reading...';
@@ -2331,6 +2488,9 @@
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
+                    // Make sure the unit list matches the license key currently typed
+                    // (no-op if already in sync), then parse into the clean state.
+                    await loadDatabaseForKey(getLicenseKey());
                     const text = e.target.result;
                     const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(l => l !== '');
 
