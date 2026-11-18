@@ -9,7 +9,7 @@
                          inputs and results (unit, stroke, rotation, counterweights,
                          step results, charts, debug table) -- every file starts clean.
                          (2) Per-license databases are now ISOLATED: a key whose prefix
-                         has assets/<PREFIX>-units.json uses ONLY that client's units
+                         has GbtSrc/<PREFIX>-units.json uses ONLY that client's units
                          (default units are cleared, not merged). Keys with no client file
                          get the default database back. Fixes two licenses' unit lists
                          piling up in the same dropdown.
@@ -37,11 +37,11 @@
     <title>Gearbox Torque Analyzer</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00d4ff">
-    <link rel="apple-touch-icon" href="icon-512.png">
+    <link rel="apple-touch-icon" href="GbtSrc/icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="GB Torque">
-    <link rel="icon" type="image/png" href="assets/favicon.png?v=1">
+    <link rel="icon" type="image/png" href="GbtSrc/favicon.png?v=1">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -105,6 +105,16 @@
         @media (max-width: 640px) {
             .app-header-flow-spacer { height: 149px; }
         }
+        /* Back to GRod Suite Home: suite icon + "Home", top-left */
+        .suite-home {
+            position: static; flex: none; margin-right: 12px;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 4px 6px 3px; border-radius: 10px; background: rgba(255,255,255,.14);
+            color: #fff; text-decoration: none; font-size: 10px; font-weight: 700; line-height: 1;
+        }
+        .suite-home img { width: 34px; height: 34px; border-radius: 22%; display: block; }
+        .suite-home:hover, .suite-home:focus-visible { background: rgba(255,255,255,.28); }
+        @media (max-width: 640px) { .suite-home { margin-right: 10px; padding: 3px 4px 2px; } .suite-home img { width: 28px; height: 28px; } }
         .install-banner {
             position: relative;
             z-index: 40;
@@ -257,7 +267,7 @@
             .app-header-spacer { display: none; }
             .app-header-center { flex-wrap: wrap; justify-content: center; }
             .app-header-right { flex: 0 0 100%; justify-content: center; order: 3; }
-            .app-logo { height: 70px; }
+            .app-logo { height: 58px; }
             .app-company-logo { height: 70px; }
             .app-title-text { font-size: 1.2rem; white-space: normal; text-align: center; }
         }
@@ -689,11 +699,12 @@
             ontouchcancel="handleTitleTouchEnd(event)">
             <div class="app-header-spacer" aria-hidden="true"></div>
             <div class="app-header-center">
-                <img src="assets/header-logo.png?v=1" alt="Gearbox Torque Analyzer" class="app-logo">
+                <img src="GbtSrc/header-logo.png?v=1" alt="Gearbox Torque Analyzer" class="app-logo">
                 <span class="app-title-text"> GS<span class="app-version-badge">v3.0</span></span>
             </div>
             <div class="app-header-right">
-                <img src="assets/company-logo.png?v=1" alt="Company logo" class="app-company-logo">
+                <a class="suite-home" href="index.html" title="GRod Suite Home" aria-label="Back to GRod Suite Home" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()"><img src="icon.png" alt=""><span>Home</span></a>
+                <img src="GbtSrc/company-logo.png?v=1" alt="Company logo" class="app-company-logo">
             </div>
         </h1>
         <div id="appHeaderFlowSpacer" class="app-header-flow-spacer"></div>
@@ -852,7 +863,7 @@
             <h2><span class="step-badge">STEP 0</span> Database File</h2>
             <p style="color:#888; font-size:0.85rem; margin-bottom:10px;">
                 The app has a <b>built-in database</b> and works immediately with no files needed.
-                To use updated data: place <b>units_pro.json</b> in an <b>assets</b> folder beside index.html, or select a database JSON file manually below.
+                To use updated data: place <b>units_pro.json</b> in the <b>GbtSrc</b> folder, or select a database JSON file manually below.
             </p>
             <div id="dbMsg" class="status info">⏳ Loading database...</div>
 
@@ -1155,10 +1166,10 @@
                     </div>
                 </div>
 
-                <!-- RIGHT: four-bar linkage guide image (external file — see assets/four-bar-linkage.png) -->
+                <!-- RIGHT: four-bar linkage guide image (external file — see GbtSrc/four-bar-linkage.png) -->
                 <div style="position:sticky; top:20px; background:#0a0a1a; border:1px solid #0f3460; border-radius:8px; padding:14px;">
                     <img id="dashLinkageImg"
-                         src="assets/four-bar-linkage.png?v=1"
+                         src="GbtSrc/four-bar-linkage.png?v=1"
                          alt="Four-bar linkage diagram of beam pumping unit"
                          style="width:100%; border-radius:6px; background:#fff; padding:6px;">
                     <div style="color:#666; font-size:0.75rem; text-align:center; margin-top:8px; line-height:1.5;">
@@ -1424,10 +1435,52 @@
             return value;
         }
 
+        // GRod Suite shares ONE key entry with this page (same browser storage):
+        //  - key activated in the suite and its license includes GBTorque -> used here;
+        //  - key accepted here and the suite has none yet -> handed to the suite.
+        const SUITE_LICENSE_STORE = 'grod.license.v1';
+        function suiteKeyForGbtorque() {
+            try {
+                const d = JSON.parse(localStorage.getItem(SUITE_LICENSE_STORE) || 'null');
+                if (!d || !d.key || !d.token) return '';
+                const b64 = d.token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+                const p = JSON.parse(atob(b64 + '==='.slice((b64.length + 3) % 4)));
+                return (p && Array.isArray(p.apps) && p.apps.indexOf('gbtorque') !== -1) ? d.key : '';
+            } catch (e) { return ''; }
+        }
+        function shareKeyWithSuite(key) {
+            try {
+                const d = JSON.parse(localStorage.getItem(SUITE_LICENSE_STORE) || 'null') || {};
+                if (d.token || d.key === key) return;   // suite already activated, or same key
+                d.key = key;
+                localStorage.setItem(SUITE_LICENSE_STORE, JSON.stringify(d));
+            } catch (e) { }
+        }
+
+        // Company logo by license key prefix: GbtSrc/<PREFIX>-logo.png (e.g. ASMS-logo.png),
+        // falling back to GbtSrc/company-logo.png when the client has none.
+        function applyCompanyLogo(key) {
+            const img = document.querySelector('.app-company-logo');
+            if (!img) return;
+            const def = 'GbtSrc/company-logo.png?v=1';
+            const pf = getKeyPrefix(key);
+            if (!pf) { if (img.dataset.pf) { delete img.dataset.pf; img.onerror = null; img.src = def; } return; }
+            if (img.dataset.pf === pf) return;
+            img.dataset.pf = pf;
+            img.onerror = function () { img.onerror = null; img.src = def; };
+            img.src = 'GbtSrc/' + pf + '-logo.png';
+        }
+
         function loadSavedLicenseKey() {
-            const saved = localStorage.getItem('gbLicenseKey');
+            let saved = localStorage.getItem('gbLicenseKey');
+            const suiteKey = suiteKeyForGbtorque();
+            if (suiteKey && suiteKey !== saved) {
+                saved = suiteKey;
+                localStorage.setItem('gbLicenseKey', saved);
+            }
             const input = document.getElementById('licenseKeyInput');
             if (saved && input) input.value = saved;
+            applyCompanyLogo(saved);
         }
 
         function saveLicenseKey(key) {
@@ -1585,6 +1638,8 @@
                 throw new Error(msg);
             }
             showLicenseStatus(json.license, true);
+            shareKeyWithSuite(licenseKey);
+            applyCompanyLogo(licenseKey);
             return json.data;
         }
 
@@ -1867,12 +1922,12 @@
             }
         }
 
-        // Tries assets/units_pro.json first (preferred location), then
+        // Tries GbtSrc/units_pro.json first (preferred location), then
         // database.json at the app root (older/alternate location, kept for
         // backward compatibility), before falling back to the manual file picker.
         async function autoLoadAllDBs() {
-            const foundInAssets = await autoLoadDB('assets/units_pro.json');
-            const foundAtRoot = await autoLoadDB('database.json');
+            const foundInAssets = await autoLoadDB('GbtSrc/units_pro.json');
+            const foundAtRoot = await autoLoadDB('GbtSrc/database.json');
             if (!foundInAssets && !foundAtRoot) {
                 document.getElementById('fallbackLoader').classList.remove('hidden');
             }
@@ -1881,7 +1936,7 @@
         // ===== PER-CLIENT DATABASE (by license-key prefix) =====
         // A license key like "CMS-engAliKey" carries a shared prefix (the
         // part before the first "-") identifying which client/company it
-        // belongs to. If assets/<PREFIX>-units.json exists, it's loaded on
+        // belongs to. If GbtSrc/<PREFIX>-units.json exists, it's loaded on
         // top of the default database, so one deployment can serve several
         // clients' unit databases from the same codebase. Keys with no
         // hyphen, or whose file doesn't exist, just keep the default
@@ -1971,7 +2026,7 @@
             const prefix = getKeyPrefix(key);
             let clientJson = null;
             if (prefix) {
-                const res = await fetchDbJson(`assets/${prefix}-units.json`);
+                const res = await fetchDbJson(`GbtSrc/${prefix}-units.json`);
                 if (res.status === 'error') return; // offline/network issue: keep current DB
                 if (res.status === 'ok' && res.json && Array.isArray(res.json.units) && res.json.units.length) {
                     clientJson = res.json;
@@ -2076,7 +2131,7 @@
             msg.className = 'status success';
             msg.textContent = '✅ Built-in database loaded. You can load database.json to override.';
 
-            // Step 2: try fetching assets/units_pro.json (or database.json) to override
+            // Step 2: try fetching GbtSrc/units_pro.json (or database.json) to override
             defaultDbReady = autoLoadAllDBs().then(() => {
                 takeDefaultSnapshot();
             });
