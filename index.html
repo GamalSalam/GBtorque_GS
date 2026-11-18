@@ -105,16 +105,6 @@
         @media (max-width: 640px) {
             .app-header-flow-spacer { height: 149px; }
         }
-        /* Back to GRod Suite Home: suite icon + "Home", top-left */
-        .suite-home {
-            position: static; flex: none; margin-right: 12px;
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-            padding: 4px 6px 3px; border-radius: 10px; background: rgba(255,255,255,.14);
-            color: #fff; text-decoration: none; font-size: 10px; font-weight: 700; line-height: 1;
-        }
-        .suite-home img { width: 34px; height: 34px; border-radius: 22%; display: block; }
-        .suite-home:hover, .suite-home:focus-visible { background: rgba(255,255,255,.28); }
-        @media (max-width: 640px) { .suite-home { margin-right: 10px; padding: 3px 4px 2px; } .suite-home img { width: 28px; height: 28px; } }
         .install-banner {
             position: relative;
             z-index: 40;
@@ -703,7 +693,6 @@
                 <span class="app-title-text"> GS<span class="app-version-badge">v3.0</span></span>
             </div>
             <div class="app-header-right">
-                <a class="suite-home" href="index.html" title="GRod Suite Home" aria-label="Back to GRod Suite Home" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()"><img src="icon.png" alt=""><span>Home</span></a>
                 <img src="GbtSrc/company-logo.png?v=1" alt="Company logo" class="app-company-logo">
             </div>
         </h1>
